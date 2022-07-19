@@ -1,0 +1,6 @@
+# Self-hosted media downloader server configs
+# Should be kept out of version control and as a secret
+[db]
+user = "shmd-db"
+password = "D^Y92q&YWj!5MYo@zea$"
+name = "shmd"
