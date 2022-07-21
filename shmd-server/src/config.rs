@@ -9,8 +9,14 @@ pub struct Db {
 }
 
 #[derive(Deserialize)]
+pub struct Music {
+    pub path: String,
+}
+
+#[derive(Deserialize)]
 pub struct Config {
     pub db: Db,
+    pub music: Music,
 }
 
 impl Config {

@@ -8,6 +8,6 @@ create table media (
 	title text not null,
 	artist text,
 	album text,
-	location text not null,
-	genreid int references genre(id),
+	location text not null unique,
+	genreid int references genre(id)
 );

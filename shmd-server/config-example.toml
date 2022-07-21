@@ -4,3 +4,6 @@
 user = "shmd-db"
 password = "D^Y92q&YWj!5MYo@zea$"
 name = "shmd"
+
+[music]
+path = "/home/user/Music/"

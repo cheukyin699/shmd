@@ -1,6 +1,7 @@
 mod db;
 mod config;
 mod routes;
+mod models;
 mod handlers;
 mod queryobjects;
 

@@ -3,6 +3,7 @@ use tokio::sync::Mutex;
 use tokio_postgres::{Client, NoTls, Error};
 
 use crate::config::Config;
+use crate::models::Media;
 
 pub type Db = Arc<Mutex<Client>>;
 
@@ -23,4 +24,19 @@ pub async fn init_db(cfg: &Config) -> Result<Db, Error> {
     });
 
     Ok(Arc::new(Mutex::new(client)))
+}
+
+pub async fn file_in_db(db: &Client, filename: &String) -> Result<bool, Error> {
+    db
+        .query_one("SELECT COUNT(*) FROM media WHERE location = $1", &[filename])
+        .await
+        .map(|row| row.get::<'_, usize, i64>(0) == 1)
+}
+
+pub async fn insert_media(db: &Client, media: &Media) -> Result<bool, Error> {
+    db
+        .execute("INSERT INTO media (title, artist, album, location) VALUES ($1, $2, $3, $4)",
+        &[&media.title, &media.artist, &media.album, &media.location])
+        .await
+        .map(|_| true)
 }
