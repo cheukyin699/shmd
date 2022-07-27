@@ -3,6 +3,7 @@ mod config;
 mod routes;
 mod models;
 mod handlers;
+mod scanner;
 mod queryobjects;
 
 #[tokio::main]
