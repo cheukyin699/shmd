@@ -63,6 +63,8 @@ fn collect_audio_files(root_folder: &String) -> Vec<PathBuf> {
 pub async fn scan_files(client: &Client, root_folder: &String) {
     let files = collect_audio_files(root_folder);
 
+    println!("Found {} files", files.len());
+
     // Look for files in root folder that aren't in the database (or need updating in the database)
     for f in &files {
         let s = f.display().to_string();

@@ -1,4 +1,5 @@
 use std::convert::Infallible;
+
 use tokio_postgres::Row;
 use warp::http::StatusCode;
 use serde::{Deserialize, Serialize};
@@ -10,7 +11,7 @@ use crate::queryobjects::MediaListQuery;
 
 #[derive(Deserialize, Serialize)]
 struct Media {
-    id: i64,
+    id: i32,
     title: String,
     artist: Option<String>,
     album: Option<String>,
@@ -74,7 +75,7 @@ pub async fn list_media(db: Db, query: MediaListQuery) -> Result<impl warp::Repl
 pub async fn scan_media(db: Db, cfg: Config) -> Result<impl warp::Reply, Infallible> {
     let client = db.lock().await;
 
-    scanner::scan_files(&client, &cfg.music.path);
+    scanner::scan_files(&client, &cfg.music.path).await;
 
     Ok(StatusCode::OK)
 }
