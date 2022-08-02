@@ -12,3 +12,5 @@ tokio = { version = "1", features = ["full"] }
 tokio-postgres = "0.7"
 warp = "0.3"
 toml = "0.5"
+id3 = "1.2"
+ogg_metadata = "0.4"

@@ -30,7 +30,7 @@ fn is_audio_file(p: &fs::DirEntry) -> bool {
  *
  * Use DFS to check folder for files.
  */
-fn collect_audio_files(root_folder: String) -> Vec<PathBuf> {
+fn collect_audio_files(root_folder: &String) -> Vec<PathBuf> {
     let mut paths = vec![];
     let mut to_check = vec![PathBuf::from(root_folder)];
 
@@ -60,7 +60,7 @@ fn collect_audio_files(root_folder: String) -> Vec<PathBuf> {
  * Add audio file metadata into database if they don't exist there. Remove rows from database if we
  * see that the file doesn't exist on the filesystem.
  */
-pub async fn scan_files(client: &Client, root_folder: String) {
+pub async fn scan_files(client: &Client, root_folder: &String) {
     let files = collect_audio_files(root_folder);
 
     // Look for files in root folder that aren't in the database (or need updating in the database)

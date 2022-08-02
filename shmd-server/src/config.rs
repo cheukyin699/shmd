@@ -1,19 +1,19 @@
 use std::fs;
 use serde::Deserialize;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct Db {
     pub user: String,
     pub password: String,
     pub name: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct Music {
     pub path: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct Config {
     pub db: Db,
     pub music: Music,
