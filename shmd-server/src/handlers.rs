@@ -4,7 +4,7 @@ use tokio_postgres::Row;
 use warp::http::StatusCode;
 use serde::{Deserialize, Serialize};
 
-use crate::db::Db;
+use crate::db::{Db, get_media};
 use crate::scanner;
 use crate::config::Config;
 use crate::queryobjects::MediaListQuery;
@@ -73,9 +73,22 @@ pub async fn list_media(db: Db, query: MediaListQuery) -> Result<impl warp::Repl
 }
 
 pub async fn scan_media(db: Db, cfg: Config) -> Result<impl warp::Reply, Infallible> {
+    tokio::spawn(async move {
+        let client = db.lock().await;
+        scanner::scan_files(&client, &cfg.music.path).await;
+    });
+
+    Ok(StatusCode::OK)
+}
+
+pub async fn download_media(id: i32, db: Db) -> Result<impl warp::Reply, Infallible> {
     let client = db.lock().await;
 
-    scanner::scan_files(&client, &cfg.music.path).await;
+    // TODO figure out how to serve dynamic files cuz warp is dumb
+    match get_media(&client, id).await {
+        Ok(media) => {},
+        Err(e) => error!("{}", e),
+    }
 
     Ok(StatusCode::OK)
 }

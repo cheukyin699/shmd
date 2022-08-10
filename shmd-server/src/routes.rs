@@ -11,13 +11,14 @@ pub fn media_routes(
     cfg: Config,
 ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
     list_media(db.clone())
+        .or(download_media(db.clone()))
         .or(scan_media(db.clone(), cfg.clone()))
 }
 
 fn list_media(
     db: Db,
 ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
-    warp::path("media")
+    warp::path!("media")
         .and(warp::get())
         .and(with_db(db))
         .and(warp::query::<MediaListQuery>())
@@ -28,11 +29,20 @@ fn scan_media(
     db: Db,
     cfg: Config,
 ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
-    warp::path("scan")
+    warp::path!("scan")
         .and(warp::get())
         .and(with_db(db))
         .and(warp::any().map(move || cfg.clone()))
         .and_then(handlers::scan_media)
+}
+
+fn download_media(
+    db: Db,
+) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
+    warp::path!("media" / i32)
+        .and(warp::get())
+        .and(with_db(db))
+        .and_then(handlers::download_media)
 }
 
 fn with_db(db: Db) -> impl Filter<Extract = (Db,), Error = Infallible> + Clone {

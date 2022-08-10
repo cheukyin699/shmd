@@ -19,7 +19,7 @@ pub async fn init_db(cfg: &Config) -> Result<Db, Error> {
 
     tokio::spawn(async move {
         if let Err(e) = connection.await {
-            eprintln!("connection error: {}", e);
+            error!("connection error: {}", e);
         }
     });
 
@@ -39,4 +39,11 @@ pub async fn insert_media(db: &Client, media: &Media) -> Result<bool, Error> {
         &[&media.title, &media.artist, &media.album, &media.location])
         .await
         .map(|_| true)
+}
+
+pub async fn get_media(db: &Client, id: i32) -> Result<Media, Error> {
+    db
+        .query_one("SELECT * FROM media WHERE id = $1", &[&id])
+        .await
+        .map(|row| Media::from_row(&row))
 }

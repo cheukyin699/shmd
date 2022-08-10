@@ -1,14 +1,15 @@
 use std::path::Path;
 
 use id3::{Tag, TagLike};
+use tokio_postgres::Row;
 
 pub struct Media {
-    pub id: Option<usize>,
+    pub id: Option<i32>,
     pub title: String,
     pub artist: Option<String>,
     pub album: Option<String>,
     pub location: String,
-    pub genreid: Option<usize>,
+    pub genreid: Option<i32>,
 }
 
 const ID3_EXTS: [&str; 3] = [
@@ -62,18 +63,26 @@ impl Media {
                     Media::from_id3(p)
                 } else {
                     let err = format!("Unsupported extension '{}'", ext);
-                    eprintln!("{}", err);
                     Media::error(err, p.display().to_string())
                 }
             } else {
                 let err = String::from("Could not convert OsStr to &str");
-                eprintln!("{}", err);
                 Media::error(err, p.display().to_string())
             }
         } else {
             let err = String::from("No extensions found");
-            eprintln!("{}", err);
             Media::error(err, p.display().to_string())
+        }
+    }
+
+    pub fn from_row(row: &Row) -> Self {
+        Media {
+            id: Some(row.get("id")),
+            title: row.get("title"),
+            artist: row.get("artist"),
+            album: row.get("album"),
+            location: row.get("location"),
+            genreid: row.get("genreid"),
         }
     }
 }

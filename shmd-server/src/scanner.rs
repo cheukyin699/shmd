@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use tokio_postgres::Client;
 
@@ -63,21 +63,19 @@ fn collect_audio_files(root_folder: &String) -> Vec<PathBuf> {
 pub async fn scan_files(client: &Client, root_folder: &String) {
     let files = collect_audio_files(root_folder);
 
-    println!("Found {} files", files.len());
-
     // Look for files in root folder that aren't in the database (or need updating in the database)
     for f in &files {
         let s = f.display().to_string();
 
         match db::file_in_db(client, &s).await {
             Ok(true) => continue,
-            Err(e) => eprintln!("{}", e),
+            Err(e) => error!("{}", e),
             _ => {},
         }
 
         let m = Media::from_path(f);
         if let Err(e) = db::insert_media(client, &m).await {
-            eprintln!("{}", e);
+            error!("{}", e);
         }
     }
 
