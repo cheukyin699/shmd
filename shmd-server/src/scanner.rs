@@ -63,19 +63,17 @@ fn collect_audio_files(root_folder: &String) -> Vec<PathBuf> {
 pub async fn scan_files(client: &Client, root_folder: &String) {
     let files = collect_audio_files(root_folder);
 
-    // Look for files in root folder that aren't in the database (or need updating in the database)
+    // Files may need updating, so insert (and update) all of them
     for f in &files {
-        let s = f.display().to_string();
-
-        match db::file_in_db(client, &s).await {
-            Ok(true) => continue,
-            Err(e) => error!("{}", e),
-            _ => {},
-        }
-
-        let m = Media::from_path(f);
-        if let Err(e) = db::insert_media(client, &m).await {
-            error!("{}", e);
+        match Media::from_path(root_folder, f) {
+            Ok(m) => {
+                if let Err(e) = db::insert_media(client, &m).await {
+                    error!("{}", e);
+                }
+            },
+            Err(e) => {
+                error!("{}", e);
+            }
         }
     }
 

@@ -4,31 +4,11 @@ use tokio_postgres::Row;
 use warp::http::StatusCode;
 use serde::{Deserialize, Serialize};
 
-use crate::db::{Db, get_media};
+use crate::db::Db;
 use crate::scanner;
+use crate::models::Media;
 use crate::config::Config;
 use crate::queryobjects::MediaListQuery;
-
-#[derive(Deserialize, Serialize)]
-struct Media {
-    id: i32,
-    title: String,
-    artist: Option<String>,
-    album: Option<String>,
-    location: String,
-}
-
-impl From<Row> for Media {
-    fn from(row: Row) -> Self {
-        Self {
-            id: row.get("id"),
-            title: row.get("title"),
-            artist: row.get("artist"),
-            album: row.get("album"),
-            location: row.get("location"),
-        }
-    }
-}
 
 #[derive(Deserialize, Serialize)]
 struct ListMediaResponse {
@@ -58,17 +38,9 @@ impl ListMediaResponse {
 pub async fn list_media(db: Db, query: MediaListQuery) -> Result<impl warp::Reply, Infallible> {
     let client = db.lock().await;
 
-    match client.query("SELECT * FROM media OFFSET $1 LIMIT $2", &[&query.offset, &query.limit]).await {
-        Ok(rows) => Ok(warp::reply::json(
-                &ListMediaResponse::positive_response(
-                    rows.into_iter()
-                    .map(|row| Media::from(row))
-                    .collect()
-                )
-        )),
-        Err(e) => Ok(warp::reply::json(
-                &ListMediaResponse::negative_response(e.to_string())
-        )),
+    match crate::db::get_media(&client, query).await {
+        Ok(media) => Ok(warp::reply::json(&ListMediaResponse::positive_response(media))),
+        Err(e) => Ok(warp::reply::json(&ListMediaResponse::negative_response(e.to_string()))),
     }
 }
 
@@ -81,14 +53,16 @@ pub async fn scan_media(db: Db, cfg: Config) -> Result<impl warp::Reply, Infalli
     Ok(StatusCode::OK)
 }
 
-pub async fn download_media(id: i32, db: Db) -> Result<impl warp::Reply, Infallible> {
+pub async fn get_media(id: i32, db: Db) -> Result<impl warp::Reply, Infallible> {
     let client = db.lock().await;
 
-    // TODO figure out how to serve dynamic files cuz warp is dumb
-    match get_media(&client, id).await {
-        Ok(media) => {},
-        Err(e) => error!("{}", e),
+    match crate::db::get_one_media(&client, id).await {
+        Ok(media) => Ok(warp::reply::json(&media)),
+        Err(e) => {
+            error!("{}", e);
+            Ok(warp::reply::json(&json!({
+                "error": format!("{}", e),
+            })))
+        },
     }
-
-    Ok(StatusCode::OK)
 }

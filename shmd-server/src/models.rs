@@ -2,7 +2,9 @@ use std::path::Path;
 
 use id3::{Tag, TagLike};
 use tokio_postgres::Row;
+use serde::{Serialize, Deserialize};
 
+#[derive(Serialize, Deserialize)]
 pub struct Media {
     pub id: Option<i32>,
     pub title: String,
@@ -17,19 +19,9 @@ const ID3_EXTS: [&str; 3] = [
 ];
 
 impl Media {
-    fn error(err: String, location: String) -> Self {
-        Media {
-            id: None,
-            title: err,
-            artist: None,
-            album: None,
-            location,
-            genreid: None,
-        }
-    }
-
-    fn from_id3(p: &Path) -> Self {
-        let location = p.display().to_string();
+    fn from_id3(root_folder: &String, p: &Path) -> Result<Self, String> {
+        // Strip root folder
+        let location = p.display().to_string().replacen(root_folder, "", 1);
 
         match Tag::read_from_path(p) {
             Ok(tags) => {
@@ -37,18 +29,18 @@ impl Media {
                 let album = tags.album().map(|x| x.to_string());
                 let artist = tags.artist().map(|x| x.to_string());
 
-                Media {
+                Ok(Media {
                     id: None,
                     title,
                     artist,
                     album,
                     location,
                     genreid: None,
-                }
+                })
             },
             Err(e) => {
                 eprintln!("{}", e);
-                Media::error(e.to_string(), location)
+                Err(e.to_string())
             },
         }
     }
@@ -56,22 +48,22 @@ impl Media {
     /**
      * Read file metadata to create structure.
      */
-    pub fn from_path(p: &Path) -> Self {
+    pub fn from_path(root_folder: &String, p: &Path) -> Result<Self, String> {
         if let Some(ext) = p.extension() {
             if let Some(ext) = ext.to_str() {
                 if ID3_EXTS.contains(&ext) {
-                    Media::from_id3(p)
+                    Media::from_id3(root_folder, p)
                 } else {
                     let err = format!("Unsupported extension '{}'", ext);
-                    Media::error(err, p.display().to_string())
+                    Err(err)
                 }
             } else {
                 let err = String::from("Could not convert OsStr to &str");
-                Media::error(err, p.display().to_string())
+                Err(err)
             }
         } else {
             let err = String::from("No extensions found");
-            Media::error(err, p.display().to_string())
+            Err(err)
         }
     }
 
@@ -84,5 +76,11 @@ impl Media {
             location: row.get("location"),
             genreid: row.get("genreid"),
         }
+    }
+
+    pub fn from_rows(rows: Vec<Row>) -> Vec<Self> {
+        rows.into_iter()
+            .map(|row| Media::from_row(&row))
+            .collect()
     }
 }
