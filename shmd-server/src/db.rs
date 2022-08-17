@@ -13,7 +13,12 @@ SELECT * FROM media WHERE id = $1
 ";
 
 const GET_MEDIA: &'static str = "
-SELECT * FROM media OFFSET $1 LIMIT $2
+SELECT * FROM media
+WHERE
+title LIKE '%' || COALESCE($1, '') || '%' AND
+artist LIKE '%' || COALESCE($2, '') || '%' AND
+album LIKE '%' || COALESCE($3, '') || '%'
+OFFSET $4 LIMIT $5
 ";
 
 const COUNT_MEDIA: &'static str = "
@@ -72,7 +77,7 @@ pub async fn get_one_media(db: &Client, id: i32) -> Result<Media, Error> {
 
 pub async fn get_media(db: &Client, q: MediaListQuery) -> Result<Vec<Media>, Error> {
     db
-        .query(GET_MEDIA, &[&q.offset, &q.limit])
+        .query(GET_MEDIA, &[&q.keyword, &q.artist, &q.album, &q.offset, &q.limit])
         .await
         .map(Media::from_rows)
 }
