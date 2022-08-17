@@ -12,6 +12,7 @@ pub fn media_routes(
 ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
     list_media(db.clone())
         .or(get_media(db.clone()))
+        .or(get_media_thumbnail(db.clone(), cfg.clone()))
         .or(scan_media(db.clone(), cfg.clone()))
         .or(download_media(cfg.clone()))
 }
@@ -54,6 +55,17 @@ fn get_media(
         .and(warp::get())
         .and(with_db(db))
         .and_then(handlers::get_media)
+}
+
+fn get_media_thumbnail(
+    db: Db,
+    cfg: Config,
+) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
+    warp::path!("media" / i32 / "thumbnail")
+        .and(warp::get())
+        .and(with_db(db))
+        .and(warp::any().map(move || cfg.clone()))
+        .and_then(handlers::get_media_thumbnail)
 }
 
 fn with_db(db: Db) -> impl Filter<Extract = (Db,), Error = Infallible> + Clone {

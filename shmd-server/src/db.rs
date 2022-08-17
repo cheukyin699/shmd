@@ -23,7 +23,7 @@ SELECT COUNT(*) FROM media WHERE location = $1
 const INSERT_CONFLICT: &'static str = "
 INSERT INTO media (title, artist, album, location)
 VALUES ($1, $2, $3, $4)
-ON CONFLICT location DO UPDATE
+ON CONFLICT (location) DO UPDATE SET
 title = $1,
 artist = $2,
 album = $3

@@ -66,3 +66,27 @@ pub async fn get_media(id: i32, db: Db) -> Result<impl warp::Reply, Infallible> 
         },
     }
 }
+
+pub async fn get_media_thumbnail(id: i32, db: Db, cfg: Config) -> Result<impl warp::Reply, Infallible> {
+    let client = db.lock().await;
+
+    match crate::db::get_one_media(&client, id).await {
+        Ok(media) => {
+            if let Some(thumbnail) = media.thumbnail(&cfg.music.path) {
+                Ok(warp::http::Response::builder()
+                    .header("Content-Type", "image")
+                    .body(thumbnail))
+            } else {
+                Ok(warp::http::Response::builder()
+                    .status(404)
+                    .body(vec![]))
+            }
+        },
+        Err(e) => {
+            error!("{}", e);
+            Ok(warp::http::Response::builder()
+                .status(404)
+                .body(vec![]))
+        }
+    }
+}

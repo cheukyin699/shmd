@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use id3::{Tag, TagLike};
 use tokio_postgres::Row;
@@ -82,5 +82,37 @@ impl Media {
         rows.into_iter()
             .map(|row| Media::from_row(&row))
             .collect()
+    }
+
+    fn id3_thumbnail(&self, loc: &PathBuf) -> Option<Vec<u8>> {
+        match Tag::read_from_path(loc) {
+            Ok(tags) => {
+                tags.pictures().next().map(|p| p.data.clone())
+            },
+            Err(e) => {
+                error!("{}", e);
+                None
+            }
+        }
+    }
+
+    pub fn thumbnail(&self, root_folder: &String) -> Option<Vec<u8>> {
+        let abs_location = Path::new(root_folder).join(&self.location);
+        if let Some(ext) = abs_location.extension() {
+            if let Some(ext) = ext.to_str() {
+                if ID3_EXTS.contains(&ext) {
+                    self.id3_thumbnail(&abs_location)
+                } else {
+                    error!("Unsupported extension '{}'", ext);
+                    None
+                }
+            } else {
+                error!("Could not convert OSStr to &str");
+                None
+            }
+        } else {
+            error!("No extensions found");
+            None
+        }
     }
 }
