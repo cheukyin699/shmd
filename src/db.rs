@@ -12,6 +12,14 @@ const GET_MEDIA_BY_ID: &'static str = "
 SELECT * FROM media WHERE id = $1
 ";
 
+const COUNT_MEDIA: &'static str = "
+SELECT COUNT(*) FROM media
+WHERE
+title LIKE '%' || COALESCE($1, '') || '%' AND
+artist LIKE '%' || COALESCE($2, '') || '%' AND
+album LIKE '%' || COALESCE($3, '') || '%'
+";
+
 const GET_MEDIA: &'static str = "
 SELECT * FROM media
 WHERE
@@ -21,7 +29,7 @@ album LIKE '%' || COALESCE($3, '') || '%'
 OFFSET $4 LIMIT $5
 ";
 
-const COUNT_MEDIA: &'static str = "
+const COUNT_MEDIA_BY_LOC: &'static str = "
 SELECT COUNT(*) FROM media WHERE location = $1
 ";
 
@@ -55,7 +63,7 @@ pub async fn init_db(cfg: &Config) -> Result<Db, Error> {
 
 pub async fn file_in_db(db: &Client, filename: &String) -> Result<bool, Error> {
     db
-        .query_one(COUNT_MEDIA, &[filename])
+        .query_one(COUNT_MEDIA_BY_LOC, &[filename])
         .await
         .map(|row| row.get::<'_, usize, i64>(0) == 1)
 }
@@ -80,4 +88,11 @@ pub async fn get_media(db: &Client, q: MediaListQuery) -> Result<Vec<Media>, Err
         .query(GET_MEDIA, &[&q.keyword, &q.artist, &q.album, &q.offset, &q.limit])
         .await
         .map(Media::from_rows)
+}
+
+pub async fn count_media(db: &Client, q: MediaListQuery) -> Result<i64, Error> {
+    db
+        .query_one(GET_MEDIA, &[&q.keyword, &q.artist, &q.album])
+        .await
+        .map(|row| row.get(0))
 }

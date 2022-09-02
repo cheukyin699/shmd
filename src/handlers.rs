@@ -90,3 +90,21 @@ pub async fn get_media_thumbnail(id: i32, db: Db, cfg: Config) -> Result<impl wa
         }
     }
 }
+
+pub async fn get_status(db: Db) -> Result<impl warp::Reply, Infallible> {
+    let client = db.lock().await;
+
+    match crate::db::count_media(&client, MediaListQuery::empty()).await {
+        Ok(total) => {
+            Ok(warp::reply::json(&json!({
+                "total": total,
+            })))
+        },
+        Err(e) => {
+            error!("{}", e);
+            Ok(warp::reply::json(&json!({
+                "error": format!("{}", e),
+            })))
+        },
+    }
+}

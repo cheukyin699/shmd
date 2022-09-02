@@ -8,3 +8,15 @@ pub struct MediaListQuery {
     pub offset: i64,
     pub limit: i64,
 }
+
+impl MediaListQuery {
+    pub fn empty() -> Self {
+        MediaListQuery {
+            artist: None,
+            album: None,
+            keyword: None,
+            offset: 0,
+            limit: 0,
+        }
+    }
+}

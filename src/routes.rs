@@ -17,6 +17,13 @@ pub fn media_routes(
         .or(download_media(cfg.clone()))
 }
 
+pub fn status_routes(
+    db: Db,
+    cfg: Config,
+) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
+    get_status(db.clone())
+}
+
 /**
  * Download media by specifying the path from either listing media or get-ing media.
  */
@@ -66,6 +73,15 @@ fn get_media_thumbnail(
         .and(with_db(db))
         .and(warp::any().map(move || cfg.clone()))
         .and_then(handlers::get_media_thumbnail)
+}
+
+fn get_status(
+    db: Db,
+) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
+    warp::path("status")
+        .and(warp::get())
+        .and(with_db(db))
+        .and_then(handlers::get_status)
 }
 
 fn with_db(db: Db) -> impl Filter<Extract = (Db,), Error = Infallible> + Clone {

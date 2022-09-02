@@ -2,6 +2,8 @@ extern crate pretty_env_logger;
 #[macro_use] extern crate log;
 #[macro_use] extern crate serde_json;
 
+use warp::Filter;
+
 mod db;
 mod config;
 mod routes;
@@ -16,12 +18,13 @@ async fn main() {
 
     let cfg = config::Config::new();
     let db = db::init_db(&cfg).await.unwrap();
-    let media_routes = routes::media_routes(db, cfg);
+    let all_routes = routes::media_routes(db.clone(), cfg.clone())
+        .or(routes::status_routes(db, cfg));
     let port = 3030;
 
     info!("Starting server on port {}", port);
 
-    warp::serve(media_routes)
-        .run(([127, 0, 0, 1], port))
+    warp::serve(all_routes)
+        .run(([0, 0, 0, 0], port))
         .await
 }
