@@ -19,7 +19,6 @@ pub fn media_routes(
 
 pub fn status_routes(
     db: Db,
-    cfg: Config,
 ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
     get_status(db.clone())
 }

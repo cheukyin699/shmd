@@ -19,7 +19,7 @@ async fn main() {
     let cfg = config::Config::new();
     let db = db::init_db(&cfg).await.unwrap();
     let all_routes = routes::media_routes(db.clone(), cfg.clone())
-        .or(routes::status_routes(db, cfg));
+        .or(routes::status_routes(db));
     let port = 3030;
 
     info!("Starting server on port {}", port);

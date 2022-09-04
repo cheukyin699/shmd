@@ -92,7 +92,7 @@ pub async fn get_media(db: &Client, q: MediaListQuery) -> Result<Vec<Media>, Err
 
 pub async fn count_media(db: &Client, q: MediaListQuery) -> Result<i64, Error> {
     db
-        .query_one(GET_MEDIA, &[&q.keyword, &q.artist, &q.album])
+        .query_one(COUNT_MEDIA, &[&q.keyword, &q.artist, &q.album])
         .await
         .map(|row| row.get(0))
 }
