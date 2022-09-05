@@ -67,28 +67,34 @@ pub async fn get_media(id: i32, db: Db) -> Result<impl warp::Reply, Infallible> 
     }
 }
 
-pub async fn get_media_thumbnail(id: i32, db: Db, cfg: Config) -> Result<impl warp::Reply, Infallible> {
+pub async fn get_album_thumbnail(album: String, db: Db, cfg: Config) -> Result<impl warp::Reply, Infallible> {
     let client = db.lock().await;
+    let query = MediaListQuery {
+        artist: None,
+        album: Some(album),
+        keyword: None,
+        offset: 0,
+        limit: 10,
+    };
 
-    match crate::db::get_one_media(&client, id).await {
-        Ok(media) => {
-            if let Some(thumbnail) = media.thumbnail(&cfg.music.path) {
-                Ok(warp::http::Response::builder()
-                    .header("Content-Type", "image")
-                    .body(thumbnail))
-            } else {
-                Ok(warp::http::Response::builder()
-                    .status(404)
-                    .body(vec![]))
+    match crate::db::get_media(&client, query).await {
+        Ok(medias) => {
+            for media in medias {
+                if let Some(thumbnail) = media.thumbnail(&cfg.music.path) {
+                    return Ok(warp::http::Response::builder()
+                        .header("Content-Type", "image")
+                        .body(thumbnail));
+                }
             }
         },
         Err(e) => {
             error!("{}", e);
-            Ok(warp::http::Response::builder()
-                .status(404)
-                .body(vec![]))
-        }
+        },
     }
+
+    Ok(warp::http::Response::builder()
+        .status(404)
+        .body(vec![]))
 }
 
 pub async fn get_status(db: Db) -> Result<impl warp::Reply, Infallible> {

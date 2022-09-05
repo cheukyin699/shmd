@@ -67,11 +67,11 @@ fn get_media_thumbnail(
     db: Db,
     cfg: Config,
 ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
-    warp::path!("media" / i32 / "thumbnail")
+    warp::path!("album" / String / "thumbnail")
         .and(warp::get())
         .and(with_db(db))
         .and(warp::any().map(move || cfg.clone()))
-        .and_then(handlers::get_media_thumbnail)
+        .and_then(handlers::get_album_thumbnail)
 }
 
 fn get_status(
