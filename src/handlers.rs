@@ -8,7 +8,7 @@ use crate::db::Db;
 use crate::scanner;
 use crate::models::Media;
 use crate::config::Config;
-use crate::queryobjects::MediaListQuery;
+use crate::queryobjects::{AlbumThumbnailQuery, MediaListQuery};
 
 #[derive(Deserialize, Serialize)]
 struct ListMediaResponse {
@@ -67,11 +67,11 @@ pub async fn get_media(id: i32, db: Db) -> Result<impl warp::Reply, Infallible> 
     }
 }
 
-pub async fn get_album_thumbnail(album: String, db: Db, cfg: Config) -> Result<impl warp::Reply, Infallible> {
+pub async fn get_album_thumbnail(db: Db, cfg: Config, query: AlbumThumbnailQuery) -> Result<impl warp::Reply, Infallible> {
     let client = db.lock().await;
     let query = MediaListQuery {
         artist: None,
-        album: Some(album),
+        album: Some(query.album),
         keyword: None,
         offset: 0,
         limit: 10,
@@ -101,6 +101,24 @@ pub async fn get_status(db: Db) -> Result<impl warp::Reply, Infallible> {
     let client = db.lock().await;
 
     match crate::db::count_media(&client, MediaListQuery::empty()).await {
+        Ok(total) => {
+            Ok(warp::reply::json(&json!({
+                "total": total,
+            })))
+        },
+        Err(e) => {
+            error!("{}", e);
+            Ok(warp::reply::json(&json!({
+                "error": format!("{}", e),
+            })))
+        },
+    }
+}
+
+pub async fn count_media(db: Db, query: MediaListQuery) -> Result<impl warp::Reply, Infallible> {
+    let client = db.lock().await;
+
+    match crate::db::count_media(&client, query).await {
         Ok(total) => {
             Ok(warp::reply::json(&json!({
                 "total": total,

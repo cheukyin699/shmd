@@ -9,6 +9,11 @@ pub struct MediaListQuery {
     pub limit: i64,
 }
 
+#[derive(Deserialize, Serialize)]
+pub struct AlbumThumbnailQuery {
+    pub album: String,
+}
+
 impl MediaListQuery {
     pub fn empty() -> Self {
         MediaListQuery {
