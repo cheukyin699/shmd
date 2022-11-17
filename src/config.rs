@@ -3,6 +3,7 @@ use serde::Deserialize;
 
 #[derive(Deserialize, Clone)]
 pub struct Db {
+    pub url: String,
     pub user: String,
     pub password: String,
     pub name: String,

@@ -1,12 +1,16 @@
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use tokio_postgres::{Client, NoTls, Error};
+use diesel::pg::PgConnection;
+use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
+use diesel::prelude::*;
+use diesel::result::Error;
 
 use crate::config::Config;
-use crate::models::Media;
+use crate::models::{Media, NewMedia};
 use crate::queryobjects::MediaListQuery;
 
-pub type Db = Arc<Mutex<Client>>;
+pub type PgPool = Pool<ConnectionManager<PgConnection>>;
+pub type PooledPg = PooledConnection<ConnectionManager<PgConnection>>;
 
 const GET_MEDIA_BY_ID: &'static str = "
 SELECT * FROM media WHERE id = $1
@@ -20,79 +24,78 @@ artist LIKE '%' || COALESCE($2, '') || '%' AND
 album LIKE '%' || COALESCE($3, '') || '%'
 ";
 
-const GET_MEDIA: &'static str = "
-SELECT * FROM media
-WHERE
-title LIKE '%' || COALESCE($1, '') || '%' AND
-artist LIKE '%' || COALESCE($2, '') || '%' AND
-album LIKE '%' || COALESCE($3, '') || '%'
-OFFSET $4 LIMIT $5
-";
-
 const COUNT_MEDIA_BY_LOC: &'static str = "
 SELECT COUNT(*) FROM media WHERE location = $1
 ";
 
-const INSERT_CONFLICT: &'static str = "
-INSERT INTO media (title, artist, album, location)
-VALUES ($1, $2, $3, $4)
-ON CONFLICT (location) DO UPDATE SET
-title = $1,
-artist = $2,
-album = $3
-";
+pub fn init_db(cfg: &Config) -> PgPool {
+    let db_url = cfg.db.url.as_str();
 
-pub async fn init_db(cfg: &Config) -> Result<Db, Error> {
-    // connection object performs actual communication with db, so put it in thread
-    let (client, connection) = tokio_postgres::Config::new()
-        .host("localhost")
-        .dbname(cfg.db.name.as_str())
-        .user(cfg.db.user.as_str())
-        .password(cfg.db.password.as_str())
-        .connect(NoTls)
-        .await?;
-
-    tokio::spawn(async move {
-        if let Err(e) = connection.await {
-            error!("connection error: {}", e);
-        }
-    });
-
-    Ok(Arc::new(Mutex::new(client)))
+    let mgr = ConnectionManager::<PgConnection>::new(db_url);
+    Pool::new(mgr).expect("Postgres connection pool could not be created")
 }
 
-pub async fn file_in_db(db: &Client, filename: &String) -> Result<bool, Error> {
-    db
-        .query_one(COUNT_MEDIA_BY_LOC, &[filename])
-        .await
-        .map(|row| row.get::<'_, usize, i64>(0) == 1)
+// pub async fn file_in_db(db: &mut PgConnection, filename: &String) -> Result<bool, Error> {
+//     use crate::schema::media::dsl::*;
+
+//     media
+//         .filter(location.eq(filename.as_str()))
+//         .count()
+//         .get_result(db)
+//         .map(|c: i64| c == 1)
+// }
+
+pub async fn insert_media(db: &mut PgConnection, media: &Vec<NewMedia>) -> Result<bool, Error> {
+    use crate::schema::media;
+
+    diesel::insert_into(media::table)
+        .values(media)
+        .execute(db)
+        .map(|s| s == media.len())
 }
 
-pub async fn insert_media(db: &Client, media: &Media) -> Result<bool, Error> {
-    db
-        .execute(INSERT_CONFLICT,
-        &[&media.title, &media.artist, &media.album, &media.location])
-        .await
-        .map(|_| true)
+// pub async fn get_one_media(db: &Client, id: i32) -> Result<Media, Error> {
+//     db
+//         .query_one(GET_MEDIA_BY_ID, &[&id])
+//         .await
+//         .map(|row| Media::from_row(&row))
+// }
+
+pub async fn get_media(connection: &mut PgConnection, q: MediaListQuery) -> Result<Vec<Media>, Error> {
+    use crate::schema::media;
+
+    let mut query = media::table.into_boxed();
+    if let Some(artist) = q.artist {
+        query = query.filter(media::artist.like(format!("%{}%", artist)));
+    }
+    if let Some(album) = q.album {
+        query = query.filter(media::album.like(format!("%{}%", album)));
+    }
+    if let Some(keyword) = q.keyword {
+        query = query.filter(media::title.like(format!("%{}%", keyword)));
+    }
+
+    query
+        .limit(q.limit)
+        .offset(q.offset)
+        .load::<Media>(connection)
 }
 
-pub async fn get_one_media(db: &Client, id: i32) -> Result<Media, Error> {
-    db
-        .query_one(GET_MEDIA_BY_ID, &[&id])
-        .await
-        .map(|row| Media::from_row(&row))
-}
+pub async fn count_media(connection: &mut PgConnection, q: MediaListQuery) -> Result<i64, Error> {
+    use crate::schema::media;
 
-pub async fn get_media(db: &Client, q: MediaListQuery) -> Result<Vec<Media>, Error> {
-    db
-        .query(GET_MEDIA, &[&q.keyword, &q.artist, &q.album, &q.offset, &q.limit])
-        .await
-        .map(Media::from_rows)
-}
+    let mut query = media::table.into_boxed();
+    if let Some(artist) = q.artist {
+        query = query.filter(media::artist.like(format!("%{}%", artist)));
+    }
+    if let Some(album) = q.album {
+        query = query.filter(media::album.like(format!("%{}%", album)));
+    }
+    if let Some(keyword) = q.keyword {
+        query = query.filter(media::title.like(format!("%{}%", keyword)));
+    }
 
-pub async fn count_media(db: &Client, q: MediaListQuery) -> Result<i64, Error> {
-    db
-        .query_one(COUNT_MEDIA, &[&q.keyword, &q.artist, &q.album])
-        .await
-        .map(|row| row.get(0))
+    query
+        .count()
+        .get_result(connection)
 }

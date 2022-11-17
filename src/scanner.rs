@@ -1,10 +1,9 @@
 use std::fs;
 use std::path::PathBuf;
-
-use tokio_postgres::Client;
+use diesel::pg::PgConnection;
 
 use crate::db;
-use crate::models::Media;
+use crate::models::NewMedia;
 
 const AUDIO_EXTS: [&str; 7] = [
     "mp3", "m4a", "ogg", "oga", "opus", "wav", "webm",
@@ -60,20 +59,28 @@ fn collect_audio_files(root_folder: &String) -> Vec<PathBuf> {
  * Add audio file metadata into database if they don't exist there. Remove rows from database if we
  * see that the file doesn't exist on the filesystem.
  */
-pub async fn scan_files(client: &Client, root_folder: &String) {
+pub async fn scan_files(pool: &mut PgConnection, root_folder: &String) {
     let files = collect_audio_files(root_folder);
 
     // Files may need updating, so insert (and update) all of them
-    for f in &files {
-        match Media::from_path(root_folder, f) {
-            Ok(m) => {
-                if let Err(e) = db::insert_media(client, &m).await {
-                    error!("{}", e);
-                }
-            },
-            Err(e) => {
-                error!("{}", e);
+    let new_media = &files
+        .into_iter()
+        .map(|ref f| {
+            match NewMedia::from_path(root_folder, f) {
+                Ok(m) => Ok(m),
+                Err(e) => {
+                    error!("scan_files(NewMedia): {}", e);
+                    Err(e)
+                },
             }
+        })
+        .filter(|r| r.is_ok())
+        .collect::<Result<Vec<NewMedia>, String>>()
+        .unwrap_or(vec![]);
+
+    if new_media.len() > 0 {
+        if let Err(e) = db::insert_media(pool, new_media).await {
+            error!("scan_files(db): {}", e);
         }
     }
 
