@@ -73,7 +73,9 @@ impl NewMedia {
             Err(err)
         }
     }
+}
 
+impl Media {
     fn id3_thumbnail(&self, loc: &PathBuf) -> Option<Vec<u8>> {
         match Tag::read_from_path(loc) {
             Ok(tags) => {

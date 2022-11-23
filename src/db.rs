@@ -54,12 +54,13 @@ pub async fn insert_media(db: &mut PgConnection, media: &Vec<NewMedia>) -> Resul
         .map(|s| s == media.len())
 }
 
-// pub async fn get_one_media(db: &Client, id: i32) -> Result<Media, Error> {
-//     db
-//         .query_one(GET_MEDIA_BY_ID, &[&id])
-//         .await
-//         .map(|row| Media::from_row(&row))
-// }
+pub async fn get_one_media(db: &mut PgConnection, id: i32) -> Result<Media, Error> {
+    use crate::schema::media::dsl::{id as dsl_id, media as dsl_media};
+
+    dsl_media
+        .filter(dsl_id.eq(id))
+        .first(db)
+}
 
 pub async fn get_media(connection: &mut PgConnection, q: MediaListQuery) -> Result<Vec<Media>, Error> {
     use crate::schema::media;

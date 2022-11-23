@@ -15,28 +15,18 @@ struct ListMediaResponse {
     data: Option<Vec<Media>>,
 }
 
-impl ListMediaResponse {
-    fn positive_response(data: Vec<Media>) -> Self {
-        Self {
-            success: true,
-            error: None,
-            data: Some(data),
-        }
-    }
-
-    fn negative_response(error: String) -> Self {
-        Self {
-            success: false,
-            error: Some(error),
-            data: None,
-        }
-    }
-}
-
 pub async fn list_media(mut pool: PooledPg, query: MediaListQuery) -> Result<impl warp::Reply, Infallible> {
     match crate::db::get_media(&mut pool, query).await {
-        Ok(media) => Ok(warp::reply::json(&ListMediaResponse::positive_response(media))),
-        Err(e) => Ok(warp::reply::json(&ListMediaResponse::negative_response(e.to_string()))),
+        Ok(media) => Ok(warp::reply::json(&ListMediaResponse {
+            success: true,
+            error: None,
+            data: Some(media),
+        })),
+        Err(e) => Ok(warp::reply::json(&ListMediaResponse {
+            success: false,
+            error: Some(e.to_string()),
+            data: None,
+        })),
     }
 }
 
@@ -48,82 +38,75 @@ pub async fn scan_media(mut pool: PooledPg, cfg: Config) -> Result<impl warp::Re
     Ok(StatusCode::OK)
 }
 
-// pub async fn get_media(id: i32, db: Db) -> Result<impl warp::Reply, Infallible> {
-//     let client = db.lock().await;
+pub async fn count_media(mut pool: PooledPg, query: MediaListQuery) -> Result<impl warp::Reply, Infallible> {
+    match crate::db::count_media(&mut pool, query).await {
+        Ok(total) => {
+            Ok(warp::reply::json(&json!({
+                "total": total,
+            })))
+        },
+        Err(e) => {
+            error!("{}", e);
+            Ok(warp::reply::json(&json!({
+                "error": format!("{}", e),
+            })))
+        },
+    }
+}
 
-//     match crate::db::get_one_media(&client, id).await {
-//         Ok(media) => Ok(warp::reply::json(&media)),
-//         Err(e) => {
-//             error!("{}", e);
-//             Ok(warp::reply::json(&json!({
-//                 "error": format!("{}", e),
-//             })))
-//         },
-//     }
-// }
+pub async fn get_media(mut pool: PooledPg, id: i32) -> Result<impl warp::Reply, Infallible> {
+    match crate::db::get_one_media(&mut pool, id).await {
+        Ok(media) => Ok(warp::reply::json(&media)),
+        Err(e) => {
+            error!("{}", e);
+            Ok(warp::reply::json(&json!({
+                "error": format!("{}", e),
+            })))
+        },
+    }
+}
 
-// pub async fn get_album_thumbnail(db: Db, cfg: Config, query: AlbumThumbnailQuery) -> Result<impl warp::Reply, Infallible> {
-//     let client = db.lock().await;
-//     let query = MediaListQuery {
-//         artist: None,
-//         album: Some(query.album),
-//         keyword: None,
-//         offset: 0,
-//         limit: 10,
-//     };
+pub async fn get_album_thumbnail(mut pool: PooledPg, cfg: Config, query: AlbumThumbnailQuery) -> Result<impl warp::Reply, Infallible> {
+    let query = MediaListQuery {
+        artist: None,
+        album: Some(query.album),
+        keyword: None,
+        offset: 0,
+        limit: 10,
+    };
 
-//     match crate::db::get_media(&client, query).await {
-//         Ok(medias) => {
-//             for media in medias {
-//                 if let Some(thumbnail) = media.thumbnail(&cfg.music.path) {
-//                     return Ok(warp::http::Response::builder()
-//                         .header("Content-Type", "image")
-//                         .body(thumbnail));
-//                 }
-//             }
-//         },
-//         Err(e) => {
-//             error!("{}", e);
-//         },
-//     }
+    match crate::db::get_media(&mut pool, query).await {
+        Ok(medias) => {
+            for media in medias {
+                if let Some(thumbnail) = media.thumbnail(&cfg.music.path) {
+                    return Ok(warp::http::Response::builder()
+                        .header("Content-Type", "image")
+                        .body(thumbnail));
+                }
+            }
+        },
+        Err(e) => {
+            error!("{}", e);
+        },
+    }
 
-//     Ok(warp::http::Response::builder()
-//         .status(404)
-//         .body(vec![]))
-// }
+    Ok(warp::http::Response::builder()
+        .status(404)
+        .body(vec![]))
+}
 
-// pub async fn get_status(db: Db) -> Result<impl warp::Reply, Infallible> {
-//     let client = db.lock().await;
-
-//     match crate::db::count_media(&client, MediaListQuery::empty()).await {
-//         Ok(total) => {
-//             Ok(warp::reply::json(&json!({
-//                 "total": total,
-//             })))
-//         },
-//         Err(e) => {
-//             error!("{}", e);
-//             Ok(warp::reply::json(&json!({
-//                 "error": format!("{}", e),
-//             })))
-//         },
-//     }
-// }
-
-// pub async fn count_media(db: Db, query: MediaListQuery) -> Result<impl warp::Reply, Infallible> {
-//     let client = db.lock().await;
-
-//     match crate::db::count_media(&client, query).await {
-//         Ok(total) => {
-//             Ok(warp::reply::json(&json!({
-//                 "total": total,
-//             })))
-//         },
-//         Err(e) => {
-//             error!("{}", e);
-//             Ok(warp::reply::json(&json!({
-//                 "error": format!("{}", e),
-//             })))
-//         },
-//     }
-// }
+pub async fn get_status(mut pool: PooledPg) -> Result<impl warp::Reply, Infallible> {
+    match crate::db::count_media(&mut pool, MediaListQuery::empty()).await {
+        Ok(total) => {
+            Ok(warp::reply::json(&json!({
+                "total": total,
+            })))
+        },
+        Err(e) => {
+            error!("{}", e);
+            Ok(warp::reply::json(&json!({
+                "error": format!("{}", e),
+            })))
+        },
+    }
+}
