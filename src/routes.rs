@@ -1,6 +1,6 @@
 use warp::{self, Filter, reject};
 
-use crate::db::{PgPool, PooledPg};
+use crate::db::PgPool;
 use crate::handlers;
 use crate::config::Config;
 use crate::queryobjects::{AlbumThumbnailQuery, MediaListQuery};

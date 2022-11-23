@@ -1,32 +1,21 @@
 use std::convert::Infallible;
 use warp::http::StatusCode;
-use serde::{Deserialize, Serialize};
 
 use crate::db::PooledPg;
 use crate::scanner;
-use crate::models::Media;
 use crate::config::Config;
 use crate::queryobjects::{AlbumThumbnailQuery, MediaListQuery};
 
-#[derive(Serialize)]
-struct ListMediaResponse {
-    success: bool,
-    error: Option<String>,
-    data: Option<Vec<Media>>,
-}
-
 pub async fn list_media(mut pool: PooledPg, query: MediaListQuery) -> Result<impl warp::Reply, Infallible> {
     match crate::db::get_media(&mut pool, query).await {
-        Ok(media) => Ok(warp::reply::json(&ListMediaResponse {
-            success: true,
-            error: None,
-            data: Some(media),
-        })),
-        Err(e) => Ok(warp::reply::json(&ListMediaResponse {
-            success: false,
-            error: Some(e.to_string()),
-            data: None,
-        })),
+        Ok(media) => Ok(warp::reply::json(&json!({
+            "success": true,
+            "data": Some(media),
+        }))),
+        Err(e) => Ok(warp::reply::json(&json!({
+            "success": false,
+            "error": Some(e.to_string()),
+        }))),
     }
 }
 
