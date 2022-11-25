@@ -1,4 +1,1 @@
-target/
-config.toml
-backup.sql
-.env
+config.rkt
