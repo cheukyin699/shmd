@@ -5,7 +5,6 @@
          (prefix-in filter: web-server/dispatchers/dispatch-filter)
          (prefix-in sequencer: web-server/dispatchers/dispatch-sequencer)
          web-server/dispatchers/filesystem-map
-         web-server/dispatch
          web-server/http/json
          web-server/http/request-structs
          web-server/servlet-dispatch
