@@ -17,16 +17,27 @@
                        #:album string?
                        #:keyword string?)
                       (not/c negative?))]
+
     [get-media (->* ()
                     (#:artist string?
                      #:album string?
                      #:keyword string?
                      #:limit positive?
-                     #:offset positive?)
-                    (listof media?))])
+                     #:offset (not/c negative?))
+                    (listof (or/c false/c media?)))]
 
-  make-media-query
-  media)
+    [insert-media (-> (struct/c
+                        media
+                        any/c
+                        string?
+                        string?
+                        string?
+                        string?)
+                      void?)]
+
+    [get-media-by-id (-> (not/c negative?) (or/c false/c media?))])
+
+  (struct-out media))
 
 (define dbc (postgresql-connect #:socket 'guess
                                 #:user config:db-username
@@ -38,8 +49,9 @@
   #:transparent)
 
 (define (row->media row)
-  (match-let ([(vector id title artist album location) row])
-    (media id title artist album location)))
+  (match row
+    [(vector id title artist album location) (media id title artist album location)]
+    [#f #f]))
 
 (define (string-empty? s)
   (zero? (string-length s)))
@@ -66,6 +78,25 @@
                  (compose sql-ast->string make-media-single-condition)
                  non-empty-conditions)
                " and ")))])))
+
+(define (get-media-by-id id)
+  (row->media
+    (query-row
+      dbc
+      (select id title artist album location
+              #:from media
+              #:where (= id ?))
+      id)))
+
+(define (insert-media m)
+  (query-exec
+    dbc
+    (insert #:into media
+            #:set [artist ?] [album ?] [title ?] [location ?])
+    (media-artist m)
+    (media-album m)
+    (media-title m)
+    (media-location m)))
 
 (define (get-media #:artist [artist ""]
                    #:album [album ""]
