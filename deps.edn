@@ -1,0 +1,14 @@
+{:paths ["src" "test"]
+
+ :deps {ring/ring {:mvn/version "1.9.6"}
+        ring/ring-json {:mvn/version "0.5.1"}
+        compojure/compojure {:mvn/version "1.7.0"}
+        zsau/id3 {:git/tag "v1.0.1"
+                  :git/url "https://github.com/zsau/id3.git"
+                  :git/sha "94f7141e989d3b228979a736e4f2bc4734283c42"}}
+
+ :aliases {:repl/clojure {:extra-deps {nrepl/nrepl {:mvn/version "0.9.0"}
+                                       cider/cider-nrepl {:mvn/version "0.28.4"}}
+                          :main-opts ["-m" "nrepl.cmdline"
+                                      "--middleware" "[cider.nrepl/cider-middleware]"
+                                      "--interactive"]}}}
