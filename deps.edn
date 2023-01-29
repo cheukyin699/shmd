@@ -2,6 +2,7 @@
 
  :deps {ring/ring {:mvn/version "1.9.6"}
         ring/ring-json {:mvn/version "0.5.1"}
+        ring/ring-defaults {:mvn/version "0.3.4"}
         compojure/compojure {:mvn/version "1.7.0"}
         zsau/id3 {:git/tag "v1.0.1"
                   :git/url "https://github.com/zsau/id3.git"
